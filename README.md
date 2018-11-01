@@ -1,4 +1,4 @@
-#ovs-rust
-ovs-rust is Rust based OpenvSwitch manipuration library.
+# ovs-rust
+ovs-rust is Rust based OpenvSwitch manipulation library.
 
 
