@@ -1,13 +1,15 @@
 #[macro_use]
-extern crate serde_derive;
-mod ovs;
 
+extern crate serde_derive;
+extern crate serde;
 extern crate serde_json;
 
-fn main() {
+pub mod ovs;
+
+#[test]
+fn test_ovs_core() {
     
     let ovsc = ovs::OvsClient::new("127.0.0.1", 6632);
-    
     match ovsc{
         Err(e) => println!("{}", e),
         Ok(mut c)=>{
