@@ -3,13 +3,18 @@
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
+extern crate uuid;
 
-pub mod ovs;
+pub mod ovs_client;
+pub mod ovs_bridge;
+pub mod ovs_port;
+pub mod ovs_error;
+pub mod ovs_transaction;
 
 #[test]
 fn test_ovs_core() {
     
-    let ovsc = ovs::OvsClient::new("127.0.0.1", 6632);
+    let ovsc = ovs_client::OvsClient::new("127.0.0.1", 6632);
     match ovsc{
         Err(e) => println!("{}", e),
         Ok(mut c)=>{
@@ -36,7 +41,7 @@ fn test_ovs_core() {
                 Err(e) => println!("{}", e)
             }
             
-            let add_result = c.add_port("sw1", "enp3s0", &ovs::OvsPortMode::Access(10));
+            let add_result = c.add_port("test", "enp3s0", &ovs_port::OvsPortMode::Access(10));
             match add_result{
                 Err(e) => {
                     println!("{}", e)

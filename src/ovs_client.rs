@@ -1,125 +1,29 @@
-extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
+
+use ovs_bridge::*;
+use ovs_port::*;
+use ovs_error::*;
+use ovs_transaction::*;
 
 use std::net::TcpStream;
 use std::net::Shutdown;
 use std::io::Write;
 use std::io::Read;
 use std::string::FromUtf8Error;
-use std::error::Error;
-use std::fmt;
-use std::fmt::Display;
+use uuid::Uuid;
 
 pub struct OvsClient{
     transaction_id : i32,
     target : String
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct OvsPort{
-    pub name : String,
-    pub uuid : String,
-    pub mode : OvsPortMode
-}
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct OvsBridge{
-    pub name : String,
-    pub uuid : String,
-    pub ports : Vec<OvsPort>
-}
-
-#[derive(Debug)]
-enum OvsErrorType{
-    ConnectionError,
-    InvalidResponse,
-    InvalidResponseJson,
-    QueryError,
-    UnexpectedResponse,
-    InconsistentInstruction
-}
-
-#[derive(Debug)]
-pub struct OvsError{
-    error_type: OvsErrorType,
-    error_message: String,
-    error_detail: String
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum OvsPortMode{
-    Access(u16),
-    Trunk(Vec<serde_json::Value>)
-}
-
-impl OvsError{
-    fn new(t: OvsErrorType, message: &str) -> OvsError{
-        OvsError{
-            error_type: t,
-            error_message : message.to_string(),
-            error_detail : "".to_string()
-        }
-    }
-    
-    fn detail(mut self, detail: &str) -> Self{
-        self.error_detail = detail.to_string();
-        self
-    }
-}
-
-impl OvsPort{
-    fn new(name:&str, uuid:&str, mode:&OvsPortMode) -> OvsPort{
-        OvsPort{
-            name: name.to_string(),
-            uuid : uuid.to_string(),
-            mode : mode.clone()
-        }
-    }
-}
-
-impl OvsBridge{
-    fn new(name:&str, uuid:&str) -> OvsBridge{
-        OvsBridge{
-            name: name.to_string(),
-            uuid : uuid.to_string(),
-            ports : Vec::new()
-        }
-    }
-}
 fn u8v_to_string(v : Vec<u8>) -> Result<String, FromUtf8Error>{
     String::from_utf8(v)
 }
 
-impl Display for OvsError{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
-        if(self.error_detail == ""){
-            write!(f, "[OvsError]{}", self.error_message)
-        }
-        else{
-            write!(f, "[OvsError]{}\n  ->(detail){}", self.error_message, self.error_detail)
-        }
-    }
-}
 
-impl Error for OvsError{
-    fn description(&self) -> &str{
-        "OvsError"
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum PortReqParam{
-    String(String),
-    OvsPort(OvsPort)
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct PortReq{
-    method : String,
-    params : Vec<PortReqParam>
-}
 
 /*
 impl Display for PortReq{
@@ -263,7 +167,7 @@ impl OvsClient{
         Ok(bridges)
     }
     
-    pub fn add_port(&mut self, bridge_name:&str, port_name: &str, port_mode: &OvsPortMode) -> Result<u8, OvsError>{
+    pub fn add_port(&mut self, bridge_name:&str, port_name: &str, _port_mode: &OvsPortMode) -> Result<u8, OvsError>{
         /*
         let base: serde_json::Value = serde_json::from_str(r#"
             {"test":"abc"}
@@ -271,11 +175,11 @@ impl OvsClient{
         
         */
         
-        let mut ports = self.get_ports()?;
-        let mut bridges = self.get_bridges()?;
+        let ports = self.get_ports()?;
+        let bridges = self.get_bridges()?;
         
         for p in ports{
-            if(p.name == port_name){
+            if p.name == port_name{
                 return Err(
                         OvsError::new(
                         OvsErrorType::InconsistentInstruction,
@@ -287,8 +191,8 @@ impl OvsClient{
         
         let mut target_bridge: Option<&OvsBridge> = None;
         
-        for i in  0..(bridges.len() - 1){
-            if(bridges[i].name == bridge_name){
+        for i in  0..bridges.len(){
+            if bridges[i].name == bridge_name{
                 target_bridge = Some(&bridges[i]);
             }
         }
@@ -313,12 +217,15 @@ impl OvsClient{
         };
         
         
+        let _tmp_uuid = Uuid::new_v4();
         
         //enp3s0
         base.params.push(PortReqParam::String("Open_vSwitch".to_string()));
-        base.params.push(PortReqParam::OvsPort(OvsPort::new(port_name, "enp3s0", port_mode)));
+        //base.params.push(PortReqParam::OvsPort(OvsPort::new(port_name, "aaa", port_mode)));
+        base.params.push(PortReqParam::OvsPortInsert(OvsPortInsert::new()));
         
         println!("{}", serde_json::to_string(&base).unwrap());
+        
         
         Ok(1)
     }
@@ -384,4 +291,3 @@ impl OvsClient{
         Ok(resp_json)
     }
 }
-
