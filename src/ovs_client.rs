@@ -221,11 +221,11 @@ impl OvsClient{
         
         //enp3s0
         base.params.push(PortReqParam::String("Open_vSwitch".to_string()));
-        //base.params.push(PortReqParam::OvsPort(OvsPort::new(port_name, "aaa", port_mode)));
-        base.params.push(PortReqParam::OvsPortInsert(OvsPortInsert::new()));
+        base.params.push(PortReqParam::OvsPortInsert(OvsPortInsert::new("enp3s0")));
         
         println!("{}", serde_json::to_string(&base).unwrap());
         
+        self._send(serde_json::Value::from(serde_json::to_string(&base).unwrap()));
         
         Ok(1)
     }
