@@ -10,7 +10,7 @@ pub struct OvsPort{
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum OvsPortMode{
     Access(u16),
-    Trunk(Vec<serde_json::Value>)
+    Trunk(Vec<u16>)
 }
 
 impl OvsPort{

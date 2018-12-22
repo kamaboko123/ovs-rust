@@ -4,7 +4,7 @@ extern crate serde_json;
 use ovs_bridge::*;
 use ovs_port::*;
 use ovs_error::*;
-use ovs_transaction::*;
+//use ovs_transaction::*;
 
 use std::net::TcpStream;
 use std::net::Shutdown;
@@ -79,10 +79,15 @@ impl OvsClient{
                     )?;
                     
                     if p["trunks"][1].as_array().unwrap().len() > 0{
+                        let mut trunk_vlans : Vec<u16> = Vec::new();
+                        for vlan in p["trunks"][1].as_array().unwrap(){
+                            trunk_vlans.push(vlan.as_u64().unwrap() as u16);
+                        }
+                        
                         ports.push(OvsPort::new(
                             name,
                             uuid,
-                            &OvsPortMode::Trunk(p["trunks"][1].as_array().unwrap().clone())
+                            &OvsPortMode::Trunk(trunk_vlans.clone())
                         ));
                         continue;
                     }
@@ -167,7 +172,7 @@ impl OvsClient{
         Ok(bridges)
     }
     
-    pub fn add_port(&mut self, bridge_name:&str, port_name: &str, _port_mode: &OvsPortMode) -> Result<u8, OvsError>{
+    pub fn add_port(&mut self, bridge_name:&str, port_name: &str, port_mode: &OvsPortMode) -> Result<serde_json::Value, OvsError>{
         /*
         let base: serde_json::Value = serde_json::from_str(r#"
             {"test":"abc"}
@@ -197,6 +202,8 @@ impl OvsClient{
             }
         }
         
+        let mut port_list:Vec<Vec<String>> = Vec::new();
+        
         match target_bridge{
             None=>{
                 return Err(
@@ -208,9 +215,87 @@ impl OvsClient{
             },
             Some(b) =>{
                 println!("{}", serde_json::to_string(b).unwrap());
+                for p in &b.ports{
+                    port_list.push(vec!("uuid".to_string(), b.uuid.clone()));
+                }
+                println!("{}", serde_json::to_string(&port_list).unwrap());
             }
         }
         
+        let interface_tmp_uuid = format!("row{}", Uuid::new_v4()).replace("-", "_");
+        let port_tmp_uuid = format!("row{}", Uuid::new_v4()).replace("-", "_");
+        
+        port_list.push(vec!("named-uuid".to_string(), port_tmp_uuid.clone()));
+        
+        let mut query = json!({
+            "method":"transact",
+            "params":[
+                "Open_vSwitch",
+                {
+                    "uuid-name" : interface_tmp_uuid,
+                    "op" : "insert",
+                    "table" : "Interface",
+                    "row":{
+                        "name":port_name,
+                        "type":""
+                    }
+                },
+                {
+                    "uuid-name": port_tmp_uuid,
+                    "op" : "insert",
+                    "table" : "Port",
+                    "row":{
+                        "name" : port_name,
+                        "interfaces":[
+                            "named-uuid",
+                            interface_tmp_uuid
+                        ]
+                    }
+                },
+                {
+                    "where": [
+                        [
+                            "_uuid",
+                            "==",
+                            [
+                                "uuid",
+                                target_bridge.unwrap().uuid
+                            ]
+                        ]
+                    ],
+                    "row": {
+                        "ports": [
+                            "set",
+                            port_list
+                        ]
+                    },
+                    "op": "update",
+                    "table": "Bridge"
+                }
+            ],
+            "id":self.transaction_id
+        });
+        
+        match port_mode{
+            &OvsPortMode::Access(vlan)=>{
+                query["params"][2]["row"].as_object_mut().unwrap().insert("tag".to_string(), serde_json::Value::from(vlan));
+            },
+            &OvsPortMode::Trunk(ref vlans)=>{
+                let mut vlan_list:Vec<u64> = Vec::new();
+                for vlan in vlans{
+                    vlan_list.push(vlan.clone().into());
+                }
+                let trunks = json!(["set",vlan_list]);
+                
+                query["params"][2]["row"].as_object_mut().unwrap().insert("trunks".to_string(), trunks);
+            }
+        }
+        
+        
+        println!("{}", query);
+        self._send(query)
+        
+        /*
         let mut base = PortReq{
             method : "transact".to_string(),
             params : Vec::new()
@@ -226,8 +311,7 @@ impl OvsClient{
         println!("{}", serde_json::to_string(&base).unwrap());
         
         self._send(serde_json::Value::from(serde_json::to_string(&base).unwrap()));
-        
-        Ok(1)
+        */
     }
     
     fn _send(&mut self, msg : serde_json::Value) -> Result<serde_json::Value, OvsError>{

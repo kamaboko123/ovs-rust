@@ -1,3 +1,4 @@
+/*
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,4 +54,4 @@ impl OvsPortInsertRow{
         }
     }
 }
-
+*/

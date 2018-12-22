@@ -2,6 +2,7 @@
 
 extern crate serde_derive;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate uuid;
 
@@ -41,7 +42,7 @@ fn test_ovs_core() {
                 Err(e) => println!("{}", e)
             }
             
-            let add_result = c.add_port("test", "enp3s0", &ovs_port::OvsPortMode::Access(10));
+            let add_result = c.add_port("test", "enp3s0", &ovs_port::OvsPortMode::Trunk(vec!(10, 20)));
             match add_result{
                 Err(e) => {
                     println!("{}", e)
