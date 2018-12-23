@@ -1,5 +1,5 @@
-#[macro_use]
 
+#[macro_use]
 extern crate serde_derive;
 extern crate serde;
 #[macro_use]
@@ -11,6 +11,7 @@ pub mod ovs_bridge;
 pub mod ovs_port;
 pub mod ovs_error;
 pub mod ovs_transaction;
+
 
 #[test]
 fn test_ovs_core() {
@@ -42,7 +43,7 @@ fn test_ovs_core() {
                 Err(e) => println!("{}", e)
             }
             
-            let add_result = c.add_port("test", "enp3s0", &ovs_port::OvsPortMode::Trunk(vec!(10, 20)));
+            let add_result = c.add_port("test", "enp3s0", &ovs_port::OvsPortMode::Trunk(vec!()));
             match add_result{
                 Err(e) => {
                     println!("{}", e)

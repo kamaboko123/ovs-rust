@@ -1,5 +1,6 @@
 extern crate serde_json;
 
+/// Struct of abstructed Open vSwitch Port
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OvsPort{
     pub name : String,
@@ -7,6 +8,8 @@ pub struct OvsPort{
     pub mode : OvsPortMode
 }
 
+/// Open vSwitch Port Mode  
+/// Currently, only support vlan in this library
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum OvsPortMode{
     Access(u16),

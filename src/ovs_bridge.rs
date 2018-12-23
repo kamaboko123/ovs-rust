@@ -2,6 +2,7 @@ extern crate serde_json;
 
 use ovs_port::*;
 
+/// Struct of abstructed Open vSwitch Bridge
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OvsBridge{
     pub name : String,

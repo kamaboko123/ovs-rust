@@ -2,6 +2,7 @@ use std::fmt;
 use std::error::Error;
 use std::fmt::Display;
 
+/// Error Type
 #[derive(Debug)]
 pub enum OvsErrorType{
     ConnectionError,
@@ -12,6 +13,8 @@ pub enum OvsErrorType{
     InconsistentInstruction
 }
 
+/// struct of error in this library  
+/// This struct is used as Result variant
 #[derive(Debug)]
 pub struct OvsError{
     pub error_type: OvsErrorType,
