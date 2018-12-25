@@ -226,7 +226,37 @@ impl OvsClient{
         let port_tmp_uuid = format!("row{}", Uuid::new_v4()).replace("-", "_");
         
         port_list.push(vec!("named-uuid".to_string(), port_tmp_uuid.clone()));
-        
+
+
+        let mut row_json = json!({});
+        match port_mode{
+            &OvsPortMode::Access(vlan)=>{
+                row_json = json!({
+                    "name" : port_name,
+                    "interfaces":[
+                        "named-uuid",
+                        interface_tmp_uuid
+                    ],
+                    "tag" : vlan
+                });
+            },
+            &OvsPortMode::Trunk(ref vlans)=>{
+                let mut vlan_list:Vec<u64> = Vec::new();
+                for vlan in vlans{
+                    vlan_list.push(vlan.clone().into());
+                }
+                let trunks = json!(["set",vlan_list]);
+                row_json = json!({
+                    "name" : port_name,
+                    "interfaces":[
+                        "named-uuid",
+                        interface_tmp_uuid
+                    ],
+                    "trunks" : trunks
+                });
+            }
+        }
+
         let mut query = json!({
             "method":"transact",
             "params":[
@@ -235,7 +265,7 @@ impl OvsClient{
                     "uuid-name" : interface_tmp_uuid,
                     "op" : "insert",
                     "table" : "Interface",
-                    "row":{
+                    "row": {
                         "name":port_name,
                         "type":""
                     }
@@ -244,13 +274,7 @@ impl OvsClient{
                     "uuid-name": port_tmp_uuid,
                     "op" : "insert",
                     "table" : "Port",
-                    "row":{
-                        "name" : port_name,
-                        "interfaces":[
-                            "named-uuid",
-                            interface_tmp_uuid
-                        ]
-                    }
+                    "row":row_json
                 },
                 {
                     "where": [
@@ -275,21 +299,6 @@ impl OvsClient{
             ],
             "id":self.transaction_id
         });
-        
-        match port_mode{
-            &OvsPortMode::Access(vlan)=>{
-                query["params"][2]["row"].as_object_mut().unwrap().insert("tag".to_string(), serde_json::Value::from(vlan));
-            },
-            &OvsPortMode::Trunk(ref vlans)=>{
-                let mut vlan_list:Vec<u64> = Vec::new();
-                for vlan in vlans{
-                    vlan_list.push(vlan.clone().into());
-                }
-                let trunks = json!(["set",vlan_list]);
-                
-                query["params"][2]["row"].as_object_mut().unwrap().insert("trunks".to_string(), trunks);
-            }
-        }
         
         
         println!("{}", query);
