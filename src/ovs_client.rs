@@ -233,7 +233,10 @@ impl OvsClient{
             &OvsPortMode::Access(vlan)=>{
                 row_json = json!({
                     "name" : port_name,
-                    "type" : "",
+                    "interfaces":[
+                        "named-uuid",
+                        interface_tmp_uuid
+                    ],
                     "tag" : vlan
                 });
             },
@@ -245,7 +248,10 @@ impl OvsClient{
                 let trunks = json!(["set",vlan_list]);
                 row_json = json!({
                     "name" : port_name,
-                    "type" : "",
+                    "interfaces":[
+                        "named-uuid",
+                        interface_tmp_uuid
+                    ],
                     "trunks" : trunks
                 });
             }
@@ -259,19 +265,16 @@ impl OvsClient{
                     "uuid-name" : interface_tmp_uuid,
                     "op" : "insert",
                     "table" : "Interface",
-                    "row": row_json
+                    "row": {
+                        "name":port_name,
+                        "type":""
+                    }
                 },
                 {
                     "uuid-name": port_tmp_uuid,
                     "op" : "insert",
                     "table" : "Port",
-                    "row":{
-                        "name" : port_name,
-                        "interfaces":[
-                            "named-uuid",
-                            interface_tmp_uuid
-                        ]
-                    }
+                    "row":row_json
                 },
                 {
                     "where": [
