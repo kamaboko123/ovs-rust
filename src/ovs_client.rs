@@ -172,14 +172,19 @@ impl OvsClient{
         Ok(bridges)
     }
     
+    pub fn get_bridge(&mut self, bridge_name:&str) -> Option<OvsBridge>{
+        let bridges = self.get_bridges().unwrap();
+        
+        for i in  0..bridges.len(){
+            if bridges[i].name == bridge_name{
+                return Some(bridges[i].clone());
+            }
+        }
+        
+        None
+    }
+    
     pub fn add_port(&mut self, bridge_name:&str, port_name: &str, port_mode: &OvsPortMode) -> Result<serde_json::Value, OvsError>{
-        /*
-        let base: serde_json::Value = serde_json::from_str(r#"
-            {"test":"abc"}
-        "#).unwrap();
-        
-        */
-        
         let ports = self.get_ports()?;
         let bridges = self.get_bridges()?;
         
@@ -194,17 +199,11 @@ impl OvsClient{
             }
         }
         
-        let mut target_bridge: Option<&OvsBridge> = None;
-        
-        for i in  0..bridges.len(){
-            if bridges[i].name == bridge_name{
-                target_bridge = Some(&bridges[i]);
-            }
-        }
-        
+        //let mut target_bridge: Option<&OvsBridge> = None;
+        //let target_bridge = self.get_bridge(bridge_name);
         let mut port_list:Vec<Vec<String>> = Vec::new();
         
-        match target_bridge{
+        let target_bridge = match self.get_bridge(bridge_name){
             None=>{
                 return Err(
                         OvsError::new(
@@ -214,13 +213,14 @@ impl OvsClient{
                 )
             },
             Some(b) =>{
-                println!("{}", serde_json::to_string(b).unwrap());
+                println!("{}", serde_json::to_string(&b).unwrap());
                 for p in &b.ports{
                     port_list.push(vec!("uuid".to_string(), b.uuid.clone()));
                 }
                 println!("{}", serde_json::to_string(&port_list).unwrap());
+                b
             }
-        }
+        };
         
         let interface_tmp_uuid = format!("row{}", Uuid::new_v4()).replace("-", "_");
         let port_tmp_uuid = format!("row{}", Uuid::new_v4()).replace("-", "_");
@@ -259,7 +259,7 @@ impl OvsClient{
                             "==",
                             [
                                 "uuid",
-                                target_bridge.unwrap().uuid
+                                target_bridge.uuid
                             ]
                         ]
                     ],
@@ -291,27 +291,9 @@ impl OvsClient{
             }
         }
         
-        
         println!("{}", query);
         self._send(query)
         
-        /*
-        let mut base = PortReq{
-            method : "transact".to_string(),
-            params : Vec::new()
-        };
-        
-        
-        let _tmp_uuid = Uuid::new_v4();
-        
-        //enp3s0
-        base.params.push(PortReqParam::String("Open_vSwitch".to_string()));
-        base.params.push(PortReqParam::OvsPortInsert(OvsPortInsert::new("enp3s0")));
-        
-        println!("{}", serde_json::to_string(&base).unwrap());
-        
-        self._send(serde_json::Value::from(serde_json::to_string(&base).unwrap()));
-        */
     }
     
     fn _send(&mut self, msg : serde_json::Value) -> Result<serde_json::Value, OvsError>{
