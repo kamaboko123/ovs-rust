@@ -43,7 +43,7 @@ fn test_ovs_core() {
                 Err(e) => println!("{}", e)
             }
             
-            let add_result = c.add_port("test", "enp3s0", &ovs_port::OvsPortMode::Trunk(vec!()));
+            let add_result = c.add_port("test", "enp3s0", &ovs_port::OvsPortMode::Access(10));
             match add_result{
                 Err(e) => {
                     println!("{}", e)
